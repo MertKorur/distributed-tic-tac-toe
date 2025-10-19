@@ -1,3 +1,15 @@
+# Node.js dependencies
+npm-debug.log
+yarn-error.log
 node_modules/
-dist/
+
+
+# Local
 .env
+.vscode/
+
+
+# Build
+build/
+.cache/
+dist/
