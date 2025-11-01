@@ -10,9 +10,18 @@ app.post("/rooms/create", async (req: Request, res: Response) => {
   try {
     const userResponse = await axios.post("http://localhost:3001/users/register", { username });
 
+    const roomId = `room-${Date.now()}`;
+    const gameResponse = await axios.post("http://localhost:3003/game/start", {
+      roomId,
+      playerX: "X",
+      playerO: "O"
+    });
+
     res.json({
       message: `Room created for ${username}`,
-      userResponse: userResponse.data
+      roomId,
+      userResponse: userResponse.data,
+      game: gameResponse.data
     });
   } catch (err) {
     console.error("Error creating room:", err);
