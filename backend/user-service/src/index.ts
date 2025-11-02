@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
 import userRoutes from './routes/userRoutes';
 import { CONFIG } from "./config";
 import { errorHandler } from "./middleware/errorHandler";
@@ -10,13 +10,14 @@ app.use(express.json());
 // Routes
 app.use('/users', userRoutes);
 
-// Check service status
-app.get("/", (req: Request, res: Response) => res.send(`${CONFIG.SERVICE_NAME} is running`));
+// Root endpoint to check service status
+app.get("/", (_, res) => res.send(`${CONFIG.SERVICE_NAME} is running`));
 
+// Middleware
 app.use(errorHandler);
 
 
 // Start server
 app.listen(CONFIG.PORT, () => {
-    console.log(`${CONFIG.SERVICE_NAME} listening on port ${CONFIG.PORT}`)
+  console.log(`${CONFIG.SERVICE_NAME} listening on port ${CONFIG.PORT}`);
 });

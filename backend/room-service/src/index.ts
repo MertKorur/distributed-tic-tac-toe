@@ -1,45 +1,23 @@
-import express, { Request, Response } from 'express';
-import axios from 'axios';
-import { nanoid } from "nanoid";
-import { errorHandler } from "./middleware/errorHandler";
+import express from 'express';
+import roomRoutes from './routes/roomRoutes';
 import { CONFIG } from "./config";
+import { errorHandler } from "./middleware/errorHandler";
 
 
 const app = express();
 app.use(express.json());
+
+// Routes
+app.use("/rooms", roomRoutes);
+
+// Root endpoint to check service status
+app.get("/", (_, res) => res.send(`${CONFIG.SERVICE_NAME} is running`));
+
+// Middleware
 app.use(errorHandler);
 
 
-app.post("/rooms/create", async (req: Request, res: Response) => {
-  const { username } = req.body;
-
-  try {
-    const userResponse = await axios.post(`${CONFIG.USER_SERVICE_URL}/users/register`, { username });
-
-    const roomId = nanoid(10);
-    const gameResponse = await axios.post(`${CONFIG.GAME_RULES_SERVICE_URL}/game/start`, {
-      roomId,
-      playerX: "X",
-      playerO: "O"
-    });
-
-    res.json({
-      message: `Room created for ${username}`,
-      roomId,
-      userResponse: userResponse.data,
-      game: gameResponse.data
-    });
-  } catch (err) {
-    console.error("Error creating room:", err);
-    res.status(500).json({ error: "Failed to create room" });
-  }
-});
-
-
-app.get("/", (req: Request, res: Response) => {
-  res.send(`${CONFIG.SERVICE_NAME} is up and running!`);
-});
-
+// Start server
 app.listen(CONFIG.PORT, () => {
-  console.log(`${CONFIG.SERVICE_NAME} running on port ${CONFIG.PORT}`);
+  console.log(`${CONFIG.SERVICE_NAME} listening on port ${CONFIG.PORT}`);
 });
