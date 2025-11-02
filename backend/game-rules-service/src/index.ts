@@ -1,8 +1,13 @@
 import express, { Request, Response } from 'express';
 import { WebSocketServer } from 'ws';
+import { errorHandler } from "./middleware/errorHandler";
+import { CONFIG } from "./config";
+
 
 const app = express();
 app.use(express.json());
+app.use(errorHandler);
+
 
 let games: Record<string, { board: string[]; currentPlayer: string }> = {};
 
@@ -38,31 +43,25 @@ app.post("/game/move", (req: Request, res: Response) => {
 
 
 app.get("/", (req: Request, res: Response) => {
-  res.send("Game Rules Service is running");
+  res.send(`${CONFIG.SERVICE_NAME} is running`);
 });
 
-const PORT = 3003;
-app.listen(PORT, () => {
-  console.log(`Game Rules Service running on port ${PORT}`);
+app.listen(CONFIG.PORT, () => {
+  console.log(`${CONFIG.SERVICE_NAME} running on port ${CONFIG.PORT}`);
 });
 
 
 function checkWin(board: string[]): string | null {
-  const winConditions = [
-    [0, 1, 2],
-    [3, 4, 5],
-    [6, 7, 8],
-    [0, 3, 6],
-    [1, 4, 7],
-    [2, 5, 8],
-    [0, 4, 8],
-    [2, 4, 6],
+  const lines = [
+    [0,1,2], [3,4,5], [6,7,8],
+    [0,3,6], [1,4,7], [2,5,8],
+    [0,4,8], [2,4,6]
   ];
-
-  for (const [a, b, c] of winConditions) {
+  for (const [a,b,c] of lines) {
     if (board[a] && board[a] === board[b] && board[a] === board[c]) {
       return board[a];
     }
   }
+  if (board.every(cell => cell)) return "draw";
   return null;
 };
