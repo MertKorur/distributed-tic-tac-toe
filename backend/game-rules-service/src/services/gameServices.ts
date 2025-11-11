@@ -2,9 +2,14 @@ import { GameState, GameStartResponse, GameMoveResponse, ErrorResponse } from "s
 
 const games: Record<string, GameState> = {};
 
-export function startGame(roomId: string, playerX: string, playerO: string): GameStartResponse {
+export function startGame(
+  roomId: string, 
+  playerX: string, 
+  playerO: string
+): GameStartResponse {
+  
   games[roomId] = {
-    board: Array(9).fill(null),
+    board: Array(9).fill(""),
     currentPlayer: playerX,
     playerX,
     playerO
@@ -16,7 +21,12 @@ export function startGame(roomId: string, playerX: string, playerO: string): Gam
   };
 };
 
-export function makeMove(roomId: string, player: string, position: number): GameMoveResponse | ErrorResponse {
+export function makeMove(
+  roomId: string, 
+  player: string, 
+  position: number
+): GameMoveResponse | ErrorResponse {
+
   const game = games[roomId];
 
   if (!game) return { error: "Game not found" };
@@ -27,16 +37,31 @@ export function makeMove(roomId: string, player: string, position: number): Game
   const symbol = player === game.playerX ? "X" : "O";
   game.board[position] = symbol;
 
+  // Check for win and end game if necessary
+  const winner = checkWin(game.board);
+  if (winner) {
+    return {
+    board: game.board, 
+    currentPlayer: game.currentPlayer,
+    winner: winner,
+    };
+  }
+
   // Switch turn
   game.currentPlayer = player === game.playerX ? game.playerO : game.playerX;
 
-  const winner = checkWin(game.board);
   return {
-    board: game.board, 
+    board: game.board,
     currentPlayer: game.currentPlayer,
-    winner: winner || null,
+    winner: null
   };
 };
+
+export function getGameStatus(roomId: string): GameState | ErrorResponse {
+  const game = games[roomId];
+  if (!game) return { error: "Game not found" };
+  return game;
+}
 
 function checkWin(board: string[]): string | null {
   const lines = [
