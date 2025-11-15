@@ -24,3 +24,27 @@ export interface GameMoveResponse {
 export interface ErrorResponse {
   error: string;
 }
+
+// WebSocket message types
+export interface JoinRoomMessage {
+  action: "joinRoom";
+  roomId: string;
+  player: string;
+}
+
+export interface MakeMoveMessage {
+  action: "makeMove";
+  roomId: string;
+  player: string;
+  position: number;
+}
+
+export interface UpdateBoardMessage {
+  action: "updateBoard";
+  board: string[];
+  currentPlayer: string;
+  winner?: string | null;
+}
+
+export type ClientMessage = JoinRoomMessage | MakeMoveMessage;
+export type ServerMessage = UpdateBoardMessage | { action: "error"; message: string } | { action: "joinedRoom"; roomId: string };
