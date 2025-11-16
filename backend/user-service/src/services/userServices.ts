@@ -28,3 +28,7 @@ export function getAllUsers(): User[] {
 export function getUserById(id: number): User | undefined {
   return users.find(u => u.id === id);
 }
+
+export function getUserByUsername(username: string): User | undefined {
+  return users.find(u => u.username === username);
+}

@@ -1,7 +1,8 @@
 import { WebSocketServer, WebSocket } from "ws";
-import { ClientMessage, ServerMessage, GameMoveResponse, UpdateBoardMessage } from "shared/types";
+import { ClientMessage, ServerMessage, GameMoveResponse, UpdateBoardMessage, GameState } from "shared/types";
 import { CONFIG } from "../config";
 import axios from "axios";
+import { activeRooms } from "../state/activeRooms";
 
 interface RoomClients {
   [roomId: string]: Set<WebSocket>;
@@ -26,16 +27,43 @@ export function initWebSocket(serverPort: number) {
           rooms[msg.roomId].add(ws);
 
           const response: ServerMessage = { action: "joinedRoom", roomId: msg.roomId };
+          
           ws.send(JSON.stringify(response));
           console.log(`Client joined room ${msg.roomId}`);
 
         } else if (msg.action === "makeMove") {
           const { roomId, player, position } = msg;
 
-          const gameResponse = await axios.post<GameMoveResponse>(
-            `${CONFIG.GAME_RULES_SERVICE_URL}/game/move`,
-            { roomId, player, position }
+          // Get current game state
+          const gameResponse = await axios.get<GameState>(
+            `${CONFIG.GAME_RULES_SERVICE_URL}/game/status/${roomId}`
           );
+          const game = gameResponse.data;
+
+          // Map "X"/"O" to actual usernames
+          const actualPlayer = player === "X" ? game.playerX : game.playerO;
+          if (!actualPlayer) {
+            ws.send(JSON.stringify({ action: "error", message: "Player not part of the game" }));
+            return;
+          }
+
+          // Check turn
+          if (game.currentPlayer !== actualPlayer) {
+            ws.send(JSON.stringify({ action: "error", message: "Not your turn" }));
+            return;
+          }
+
+          // Send move to Game Rules service
+          const moveResponse = await axios.post<GameMoveResponse>(
+            `${CONFIG.GAME_RULES_SERVICE_URL}/game/move`,
+            { roomId, player: actualPlayer, position }
+          );
+
+          if (moveResponse.data.winner) {
+            activeRooms.forEach((user, rId) => {
+              if (rId === roomId) activeRooms.delete(user);
+            });
+          }
 
           const updateMsg: UpdateBoardMessage = {
             action: "updateBoard",

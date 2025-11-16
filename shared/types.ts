@@ -4,10 +4,12 @@ export interface User {
 }
 
 export interface GameState {
+  roomId: string;
   board: string[];
   currentPlayer: string;
   playerX: string;
   playerO: string;
+  winner?: string | null;
 }
 
 export interface GameStartResponse {

@@ -7,17 +7,21 @@ export function startGame(
   playerX: string, 
   playerO: string
 ): GameStartResponse {
-  
-  games[roomId] = {
+
+  const newGame: GameState = {
+    roomId,
     board: Array(9).fill(""),
-    currentPlayer: playerX,
     playerX,
-    playerO
+    playerO,
+    currentPlayer: playerX,
+    winner: null
   };
+  
+  games[roomId] = newGame;
 
   return {
     message: `Game started for room ${roomId}`,
-    board: games[roomId].board
+    board: newGame.board,
   };
 };
 
