@@ -40,9 +40,7 @@ export function initWebSocket(serverPort: number) {
 
           let game: GameState;
           try {
-            const response = await axios.get<GameState>(
-              `${CONFIG.GAME_RULES_SERVICE_URL}/game/status/${roomId}`
-            );
+            const response = await axios.get<GameState>(`${CONFIG.GAME_RULES_SERVICE_URL}/game/status/${roomId}`);
             game = response.data;
           } catch {
             ws.send(JSON.stringify({ 
@@ -52,34 +50,6 @@ export function initWebSocket(serverPort: number) {
             return;
           }
 
-          // Allow playerO to claim slot if unassigned
-          if (player !== game.playerO && !game.playerO) {
-            try {
-              await axios.post(`${CONFIG.GAME_RULES_SERVICE_URL}/game/join`, { 
-                roomId, 
-                playerO: player 
-              });
-              game.playerO = player; // update local game state
-              console.log(`Player ${player} claimed O game in room ${roomId}`);
-            } catch {
-              ws.send(JSON.stringify({ 
-                action: "error", 
-                message: "Failed to join as Player O."
-              }));
-              return;
-            }
-          }
-
-          // Check that the player belongs to game
-          const allowedPlayers = [game.playerX, game.playerO].filter(Boolean);
-          if (!allowedPlayers.includes(player)) {
-            ws.send(JSON.stringify({ 
-              action: "error", 
-              message: `Player ${player} is not a part of this game.`
-            }));
-            return;
-          }
-          
           // Prevent multiple connections for same player
           if (userConnections[player]) {
             ws.send(JSON.stringify({ 
@@ -88,16 +58,36 @@ export function initWebSocket(serverPort: number) {
             }));
             return;
           }
+
+          // Check that the player allowed to join game
+          // If slot O is empty, claim it
+          if (player !== game.playerX) {
+            if (!game.playerO) {
+              try {
+                await axios.post(`${CONFIG.GAME_RULES_SERVICE_URL}/game/join`, { roomId, playerO: player });
+                game.playerO = player;
+                console.log(`Player ${player} claimed O slot in room ${roomId}`);
+              } catch (err: any) {
+                ws.send(JSON.stringify({ action: "error", message: err.response?.data?.error || "Failed to join as Player O." }));
+                return;
+              }
+            } else if (player !== game.playerO) {
+              ws.send(JSON.stringify({ 
+                action: "error", 
+                message: `Player ${player} is not a part of this game.` 
+              }));
+              return;
+            }
+          }
+          
+          // Register connection with username
           userConnections[player] = ws;
 
           // Add the WS client to the room
           if (!rooms[roomId]) rooms[roomId] = new Set();
           rooms[roomId].add(ws);
 
-          ws.send(JSON.stringify({ 
-            action: "joinedRoom", 
-            roomId
-          }));
+          ws.send(JSON.stringify({ action: "joinedRoom", roomId }));
           console.log(`Player ${player} joined WS room ${roomId}`);
         } 
         
@@ -105,33 +95,40 @@ export function initWebSocket(serverPort: number) {
         // MAKE MOVE
         //
         else if (msg.action === "makeMove") {
-          const { roomId, player, position } = msg;
+          const { roomId, player: symbol, position } = msg;
 
           // Get current game state
-          const gameResponse = await axios.get<GameState>(
-            `${CONFIG.GAME_RULES_SERVICE_URL}/game/status/${roomId}`
-          );
-          const game = gameResponse.data;
-
-          // Map X or O to usernames
-          const actualPlayer = 
-          player === "X" ? game.playerX : 
-          player === "O" ? game.playerO : null;
-
-          if (!actualPlayer) {
+          let game: GameState;
+          try {
+            const gameResponse = await axios.get<GameState>(`${CONFIG.GAME_RULES_SERVICE_URL}/game/status/${roomId}`);
+            game = gameResponse.data;
+          } catch {
             ws.send(JSON.stringify({ 
               action: "error", 
-              message: "Invalid player" 
+              message: "Game does not exist."
+            }));
+            return;
+          }
+
+          // Map X or O to usernames
+          const actualPlayer = symbol === "X" ? game.playerX : game.playerO;
+          if (!actualPlayer) {
+            ws.send(JSON.stringify({ action: "error", message: "Invalid player" }));
+            return;
+          }
+
+          // Check that WS is connected as the actual player
+          if (!userConnections[actualPlayer] || userConnections[actualPlayer] !== ws) {
+            ws.send(JSON.stringify({ 
+              action: "error", 
+              message: "You are not connected as this player." 
             }));
             return;
           }
 
           // Validate turn
           if (game.currentPlayer !== actualPlayer) {
-            ws.send(JSON.stringify({ 
-              action: "error", 
-              message: "Not your turn" 
-            }));
+            ws.send(JSON.stringify({ action: "error", message: "Not your turn." }));
             return;
           }
 
@@ -160,7 +157,7 @@ export function initWebSocket(serverPort: number) {
 
           // Remove rooms that have a resolution
           if (moveResponse.data.winner) {
-            console.log(`Game in room ${roomId} finished: Winner = ${moveResponse.data.winner}`);
+            console.log(`Game in room ${roomId} finished: Winner = ${moveResponse.data.winner}.`);
             
             // Clear activeRooms
             [game.playerX, game.playerO].forEach(p => {
@@ -172,9 +169,8 @@ export function initWebSocket(serverPort: number) {
         }
 
       } catch (error: any) {
-        ws.send(JSON.stringify({ 
-          action: "error", message : error.message || "WS error."
-        }));
+        const message = error.response?.data?.error || error.message || "Invalid message format";
+        ws.send(JSON.stringify({ action: "error", message }));
       }
     });
 
@@ -191,7 +187,7 @@ export function initWebSocket(serverPort: number) {
       });
 
       // Remove from userConnections
-      Object.keys(userConnections).forEach((username) => {
+      Object.keys(userConnections).forEach(username => {
         if (userConnections[username] === ws) delete userConnections[username];
       });
     });
