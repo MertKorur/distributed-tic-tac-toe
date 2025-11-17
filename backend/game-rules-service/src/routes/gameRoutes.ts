@@ -1,13 +1,30 @@
 import { Router, Request, Response } from "express";
-import { startGame, makeMove, getGameStatus } from "../services/gameServices";
+import { startGame, makeMove, getGameStatus, joinGame } from "../services/gameServices";
 import { ErrorResponse } from "shared/types";
 
 const router = Router();
 
 router.post("/start", (req: Request, res: Response) => {
   const { roomId, playerX, playerO } = req.body;
-  const result = startGame(roomId, playerX, playerO);
+
+  const result = startGame(roomId, playerX, playerO ?? null);
+
+  if ((result as ErrorResponse).error) {
+    return res.status(400).json(result);
+  }
+
   res.json(result);
+});
+
+router.post("/join", (req: Request, res: Response) => {
+    const { roomId, playerO } = req.body;
+    const result = joinGame(roomId, playerO);
+
+    if ((result as ErrorResponse).error) {
+        return res.status(400).json(result);
+    }
+
+    res.json(result);
 });
 
 router.post("/move", (req: Request, res: Response) => {
@@ -16,19 +33,19 @@ router.post("/move", (req: Request, res: Response) => {
 
     if ((result as ErrorResponse).error) {
         res.status(400).json(result);
-    } else {
-        res.json(result);
     }
+    
+    res.json(result);
 });
 
 router.get("/status/:roomId", (req: Request, res: Response) => {
-    try {
-        const { roomId } = req.params;
-        const status = getGameStatus(roomId);
-        res.json(status);
-    } catch (error) {
-        res.status(400).json({ error: (error as Error).message });
+    const result = getGameStatus(req.params.roomId);
+
+    if ((result as ErrorResponse).error) {
+        return res.status(400).json(result);
     }
+    
+    res.json(result);
 });
 
 export default router;

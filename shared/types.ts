@@ -8,7 +8,7 @@ export interface GameState {
   board: string[];
   currentPlayer: string;
   playerX: string;
-  playerO: string;
+  playerO: string | null;
   winner?: string | null;
 }
 

@@ -1,12 +1,27 @@
-import { GameState, GameStartResponse, GameMoveResponse, ErrorResponse } from "shared/types";
+import { error } from "console";
+import { 
+  GameState, 
+  GameStartResponse, 
+  GameMoveResponse, 
+  ErrorResponse 
+} from "shared/types";
 
 const games: Record<string, GameState> = {};
 
 export function startGame(
   roomId: string, 
   playerX: string, 
-  playerO: string
-): GameStartResponse {
+  playerO: string | null
+): GameStartResponse | ErrorResponse {
+
+  const existing = games[roomId];
+  if (existing) {
+    return { error: `Game already exists for room ${roomId}` };
+  }
+
+  if (!playerX) {
+    return { error: "Player X is required to start a game" };
+  }
 
   const newGame: GameState = {
     roomId,
@@ -25,6 +40,23 @@ export function startGame(
   };
 };
 
+export function joinGame(
+  roomId: string, 
+  playerO: string
+): GameStartResponse | ErrorResponse {
+  const game = games[roomId];
+
+  if (!game) return { error: "Game not found" };
+  if (game.playerO) return { error: "Player O already joined" };
+  
+  game.playerO = playerO;
+
+  return {
+    message: `Player O: ${playerO} joined game in room ${roomId}`,
+    board: game.board,
+  };
+}
+
 export function makeMove(
   roomId: string, 
   player: string, 
@@ -34,6 +66,8 @@ export function makeMove(
   const game = games[roomId];
 
   if (!game) return { error: "Game not found" };
+  if (game.winner) return { error: "Game has already ended" };
+  if (position < 0 || position > 8) return { error: "Invalid position" };
   if (game.board[position]) return { error: "Position already taken" };
   if (game.currentPlayer !== player) return { error: "Not your turn" };
 
@@ -45,21 +79,21 @@ export function makeMove(
   const winner = checkWin(game.board);
   if (winner) {
     return {
-    board: game.board, 
-    currentPlayer: game.currentPlayer,
-    winner: winner,
+      board: game.board, 
+      currentPlayer: game.currentPlayer,
+      winner: winner,
     };
   }
 
   // Switch turn
-  game.currentPlayer = player === game.playerX ? game.playerO : game.playerX;
+  game.currentPlayer = player === game.playerX ? game.playerO! : game.playerX;
 
   return {
     board: game.board,
     currentPlayer: game.currentPlayer,
     winner: null
   };
-};
+}
 
 export function getGameStatus(roomId: string): GameState | ErrorResponse {
   const game = games[roomId];
@@ -73,11 +107,13 @@ function checkWin(board: string[]): string | null {
     [0,3,6], [1,4,7], [2,5,8],
     [0,4,8], [2,4,6]
   ];
+
   for (const [a,b,c] of lines) {
     if (board[a] && board[a] === board[b] && board[a] === board[c]) {
       return board[a];
     }
   }
+
   if (board.every(cell => cell)) return "draw";
   return null;
 };
