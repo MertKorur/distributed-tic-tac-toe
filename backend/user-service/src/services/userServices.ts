@@ -8,7 +8,7 @@ export function registerUser(username: string): User {
     throw new Error("Username is required");
   }
 
-  if (users.find(u => u.username === username)) {
+  if (users.find(u => u.username.trim().toLowerCase() === username.trim().toLowerCase())) {
     throw new Error("Username already exists");
   }
 

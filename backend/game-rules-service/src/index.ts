@@ -10,7 +10,7 @@ app.use(express.json());
 // Routes
 app.use("/game", gameRoutes);
 
-// Root endpoint to check service status
+// Root endpoint
 app.get("/", (_, res) => res.send(`${CONFIG.SERVICE_NAME} is running`));
 
 // Middleware

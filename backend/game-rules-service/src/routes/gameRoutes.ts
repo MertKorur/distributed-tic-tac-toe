@@ -1,51 +1,57 @@
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { startGame, makeMove, getGameStatus, joinGame } from "../services/gameServices";
-import { ErrorResponse } from "shared/types";
 
 const router = Router();
 
-router.post("/start", (req: Request, res: Response) => {
-  const { roomId, playerX, playerO } = req.body;
+router.post("/start", (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { roomId, playerX, playerO } = req.body;
+    const result = startGame(roomId, playerX, playerO ?? null);
 
-  const result = startGame(roomId, playerX, playerO ?? null);
+    if ("error" in result) throw new Error(result.error);
 
-  if ((result as ErrorResponse).error) {
-    return res.status(400).json(result);
+    res.json(result);
+  } catch (err) {
+    next(err);
   }
-
-  res.json(result);
 });
 
-router.post("/join", (req: Request, res: Response) => {
+router.post("/join", (req: Request, res: Response, next: NextFunction) => {
+  try {
     const { roomId, playerO } = req.body;
     const result = joinGame(roomId, playerO);
 
-    if ((result as ErrorResponse).error) {
-        return res.status(400).json(result);
-    }
+    if ("error" in result) throw new Error(result.error);
 
     res.json(result);
+  } catch (err) {
+    next(err);
+  }
 });
 
-router.post("/move", (req: Request, res: Response) => {
+router.post("/move", (req: Request, res: Response, next: NextFunction) => {
+  try {
     const { roomId, player, position } = req.body;
     const result = makeMove(roomId, player, position);
 
-    if ((result as ErrorResponse).error) {
-        res.status(400).json(result);
-    }
-    
+    if ("error" in result) throw new Error(result.error);
+
     res.json(result);
+  } catch (err) {
+    next(err);
+  }
 });
 
-router.get("/status/:roomId", (req: Request, res: Response) => {
-    const result = getGameStatus(req.params.roomId);
+router.get("/status/:roomId", (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const status = getGameStatus(req.params.roomId);
 
-    if ((result as ErrorResponse).error) {
-        return res.status(400).json(result);
-    }
-    
-    res.json(result);
+    if ("error" in status) throw new Error(status.error);
+
+    res.json(status);
+  } catch (err) {
+    next(err);
+  }
 });
 
 export default router;

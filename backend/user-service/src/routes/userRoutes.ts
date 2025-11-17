@@ -1,39 +1,46 @@
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { registerUser, getUserByUsername, getUserById, getAllUsers } from "../services/userServices";
 
 const router = Router();
 
-router.post("/register", (req: Request, res: Response) => {
-  const { username } = req.body;
-
+router.post("/register", (req: Request, res: Response, next: NextFunction) => {
   try {
-    const user = registerUser(username);
+    const user = registerUser(req.body.username);
     res.status(201).json(user);
-
   } catch (err: any) {
-    res.status(400).json({ error: err.message });
+    next(err);
   }
 });
 
-router.get("/username/:username", (req: Request, res: Response) => {
-  const { username } = req.params;
-  const user = getUserByUsername(username);
-
-  if (!user) return res.status(404).json({ error: "User not found" });
-  res.json(user);
+router.get("/username/:username", (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = getUserByUsername(req.params.username);
+    if (!user) throw new Error("User not found");
+    res.json(user);
+  } catch (err: any) {
+    next(err);
+  }
 });
 
-router.get("/id/:id", (req: Request, res: Response) => {
-  const id = Number(req.params.id);
-  const user = getUserById(id);
+router.get("/id/:id", (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = Number(req.params.id);
+    const user = getUserById(id);
 
-  if (!user) return res.status(404).json({ error: "User not found" });
-  res.json(user);
+    if (!user) throw new Error("User not found");
+    res.json(user);
+  } catch (err: any) {
+    next(err);
+  }
 });
 
-router.get("/", (req: Request, res: Response) => {
-  const users = getAllUsers();
-  res.json(users);
+router.get("/", (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const users = getAllUsers();
+    res.json(users);
+  } catch (err: any) {
+    next(err);
+  }
 });
 
 export default router;

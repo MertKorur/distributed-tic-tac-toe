@@ -1,4 +1,3 @@
-import { error } from "console";
 import { 
   GameState, 
   GameStartResponse, 
@@ -78,10 +77,11 @@ export function makeMove(
   // Check for win and end game if necessary
   const winner = checkWin(game.board);
   if (winner) {
+    game.winner = winner;
     return {
       board: game.board, 
       currentPlayer: game.currentPlayer,
-      winner: winner,
+      winner,
     };
   }
 

@@ -3,15 +3,12 @@ import { createRoom } from "../services/roomServices";
 
 const router = Router();
 
-router.post("/create", async (req, res) => {
-  const { username } = req.body;
-
+router.post("/create", async (req, res, next) => {
   try {
-    const result = await createRoom(username);
+    const result = await createRoom(req.body.username);
     res.status(201).json(result);
   } catch (err: any) {
-    console.error("Error creating room:", err.message);
-    res.status(400).json({ error: err.message });
+    next(err);
   }
 });
 
