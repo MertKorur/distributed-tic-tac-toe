@@ -48,5 +48,25 @@ export interface UpdateBoardMessage {
   winner?: string | null;
 }
 
+export interface GameOverMessage {
+  action: "gameOver";
+  winner: string | null;
+}
+
+export interface UserJoinedMessage {
+  action: "userJoined";
+  player: string;
+}
+
+export interface UserLeftMessage {
+  action: "userLeft";
+  player: string;
+}
+
 export type ClientMessage = JoinRoomMessage | MakeMoveMessage;
-export type ServerMessage = UpdateBoardMessage | { action: "error"; message: string } | { action: "joinedRoom"; roomId: string };
+export type ServerMessage = 
+| UpdateBoardMessage 
+| { action: "error"; message: string } 
+| UserJoinedMessage
+| UserLeftMessage
+| GameOverMessage;
