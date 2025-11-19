@@ -1,8 +1,8 @@
 import express from 'express';
 import roomRoutes from './routes/roomRoutes';
-import { CONFIG } from "./config";
+import { CONFIG } from "./config/config";
 import { errorHandler } from "./middleware/errorHandler";
-import { initWebSocket } from './ws/wsServer';
+import { initWebSocket } from './websocket/wsServer';
 
 const app = express();
 app.use(express.json());
