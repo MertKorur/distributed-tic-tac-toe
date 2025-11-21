@@ -9,6 +9,8 @@ import {
   GameState 
 } from "shared/types";
 import {
+  rooms,
+  userConnections,
   removeConnectionByUsername,
   handleSocketDisconnect,
   broadcast,
@@ -17,7 +19,7 @@ import {
 import { CONFIG } from "../config/config";
 import axios from "axios";
 
-
+/*
 interface RoomClients {
   [roomId: string]: Set<WebSocket>;
 }
@@ -29,6 +31,7 @@ interface UserConnections {
 // Connected Clients per room
 const rooms: RoomClients = {};
 const userConnections: UserConnections = {};
+*/
 
 export function initWebSocket(serverPort: number) {
   const wss = new WebSocketServer({ port: serverPort });
@@ -47,6 +50,17 @@ export function initWebSocket(serverPort: number) {
         if (msg.action === "joinRoom") {
           const { roomId, player } = msg;
 
+          for (const [existingUser, existingWs] of Object.entries(userConnections)) {
+            if (existingWs === ws && existingUser !== player) {
+              ws.send(JSON.stringify({
+                action: "error",
+                message: `You are already connected as '${existingUser}'.`
+                }));
+              return;
+            }
+          }
+
+          // Validate game room exists and fetch state
           let game: GameState;
           try {
             const response = await axios.get<GameState>(
@@ -71,7 +85,11 @@ export function initWebSocket(serverPort: number) {
 
           // Prevent multiple connections for same player
           if (userConnections[player] && userConnections[player] !== ws) {
-            removeConnectionByUsername(player);
+            //removeConnectionByUsername(player);
+            ws.send(JSON.stringify({ 
+              action: "error", 
+              message: `Player '${player}' is already connected.` }));
+            return;
           }
 
           // If player isnt X, try to join as O
@@ -116,8 +134,10 @@ export function initWebSocket(serverPort: number) {
           }
 
           // Register connection with username
-          userConnections[player] = ws;
-
+          if (!userConnections[player]) {
+            userConnections[player] = ws;
+          }
+          
           // Add the WS client to the room
           if (!rooms[roomId]) rooms[roomId] = new Set();
           rooms[roomId].add(ws);

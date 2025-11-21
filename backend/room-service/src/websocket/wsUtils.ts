@@ -78,12 +78,6 @@ function cleanupRoomAfterFinish(roomId: string, game: GameState) {
   // Ensure clients exist
   const clients = rooms[roomId];
 
-  //Broadcast game over
-  broadcast(roomId, <GameOverMessage>{
-    action: "gameOver",
-    winner: game.winner ?? null
-  });
-
   // Remove user connections
   if (game.playerX) delete userConnections[game.playerX];
   if (game.playerO) delete userConnections[game.playerO];
