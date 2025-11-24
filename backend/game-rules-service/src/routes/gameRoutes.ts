@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { startGame, makeMove, getGameStatus, joinGame } from "../services/gameServices";
+import { startGame, deleteGame, makeMove, getGameStatus, joinGame } from "../services/gameServices";
 
 const router = Router();
 
@@ -49,6 +49,19 @@ router.get("/status/:roomId", (req: Request, res: Response, next: NextFunction) 
     if ("error" in status) throw new Error(status.error);
 
     res.json(status);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Delete a finished game
+router.delete("/end/:roomId", (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = deleteGame(req.params.roomId);
+
+    if ("error" in result) throw new Error(result.error);
+
+    res.json(result);
   } catch (err) {
     next(err);
   }

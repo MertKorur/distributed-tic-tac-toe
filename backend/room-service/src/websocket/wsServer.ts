@@ -18,20 +18,7 @@ import {
 } from "./wsUtils";
 import { CONFIG } from "../config/config";
 import axios from "axios";
-
-/*
-interface RoomClients {
-  [roomId: string]: Set<WebSocket>;
-}
-
-interface UserConnections {
-  [username: string]: WebSocket;
-}
-
-// Connected Clients per room
-const rooms: RoomClients = {};
-const userConnections: UserConnections = {};
-*/
+import { clearUserRoom } from "../state/activeRooms";
 
 export function initWebSocket(serverPort: number) {
   const wss = new WebSocketServer({ port: serverPort });
@@ -266,7 +253,7 @@ export function initWebSocket(serverPort: number) {
     //
     ws.on("close", () => {
       console.log("Client disconnected.");
-      handleSocketDisconnect(ws);
+      handleSocketDisconnect(ws); //
 
       // Remove client from all rooms and broadcast disconnection
       let disconnectedPlayer: string | null = null;
@@ -297,6 +284,10 @@ export function initWebSocket(serverPort: number) {
         return;
       }
 
+      // clear activeRooms for disconnected player
+      clearUserRoom(disconnectedPlayer);
+      console.log(`Cleared active room for disconnected player ${disconnectedPlayer}`);
+
       // Remove socket from any rooms and notify others of which player left
       Object.entries(rooms).forEach(([roomId, clients]) => {
         if (clients.has(ws)) {
@@ -306,7 +297,23 @@ export function initWebSocket(serverPort: number) {
           if (clients.size > 0) {
             broadcast(roomId, <UserLeftMessage>{
               action: "userLeft",
-              player: disconnectedPlayer});
+              player: disconnectedPlayer
+            });
+
+            // End the game if one player left
+            clients.forEach(client => {
+              try {
+                client.send(JSON.stringify({
+                  action: "error",
+                  message: `Player '${disconnectedPlayer}' disconnected. Game over.`
+                }));
+                client.close();
+              } catch {}
+            });
+
+            // Clean up room
+            delete rooms[roomId];
+            console.log(`Cleaned up room ${roomId} after player disconnection.`);
           } else {
             // Clean up empty room
             delete rooms[roomId];

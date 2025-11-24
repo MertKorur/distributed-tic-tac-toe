@@ -1,5 +1,7 @@
 import { WebSocket } from "ws";
 import { GameState, GameOverMessage, UserLeftMessage } from "shared/types";
+import { clearUserRoom } from "../state/activeRooms";
+import { CONFIG } from "../config/config";
 
 interface RoomClients { [roomId: string]: Set<WebSocket>; }
 interface UserConnections { [username: string]: WebSocket; }
@@ -74,20 +76,35 @@ function broadcast(roomId: string, payload: any) {
   });
 }
 
-function cleanupRoomAfterFinish(roomId: string, game: GameState) {
-  // Ensure clients exist
-  const clients = rooms[roomId];
+async function cleanupRoomAfterFinish(roomId: string, game: GameState) {
+  if (game.playerX) {
+    clearUserRoom(game.playerX);
+    console.log(`Cleaned up user ${game.playerX} from room ${roomId}`);
+  }  
+  if (game.playerO) {
+    clearUserRoom(game.playerO);
+    console.log(`Cleaned up user ${game.playerO} from room ${roomId}`);
+  }
 
   // Remove user connections
   if (game.playerX) delete userConnections[game.playerX];
   if (game.playerO) delete userConnections[game.playerO];
 
   // Close and delete all WS connections in the room
+  const clients = rooms[roomId];
   if (clients) {
     clients.forEach(client => {
       try {client.close();} catch {}
     });
     delete rooms[roomId];
+  }
+
+  // Delete game from Game Rules Service
+  try {
+    await axios.delete(`${CONFIG.GAME_RULES_SERVICE_URL}/games/${roomId}`)
+    console.log(`Deleted game ${roomId}`);
+  } catch (err: any) {
+    console.error(`Failed to delete game ${roomId}: ${err.message}`);
   }
 
   console.log(`Cleanup finished in room ${roomId}`);

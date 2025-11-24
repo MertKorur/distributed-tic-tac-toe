@@ -52,4 +52,17 @@ export async function createRoom(username: string) {
     user,
     game: gameResponse.data
   };
-};
+}
+
+// Returns list of rooms waiting for a player O
+export function listOpenRooms(): Array<{ roomId: string; createdBy: string }> {
+  const openRooms: Array<{ roomId: string; createdBy: string }> = [];
+
+  for (const [username, roomId] of activeRooms.entries()) {
+    openRooms.push({ 
+      roomId, 
+      createdBy: username 
+    });
+  }
+  return openRooms;
+}
