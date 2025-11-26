@@ -2,30 +2,36 @@
   "name": "cli",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "directories": {
+    "test": "tests"
+  },
   "scripts": {
-    "start": "npx ts-node src/index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "devStart": "nodemon src/index.ts"
+    "test": "jest --runInBand",
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "start": "node dist/index.js",
+    "build": "tsc -p tsconfig.json"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "module",
+  "type": "commonjs",
   "dependencies": {
     "axios": "^1.13.2",
+    "chalk": "^5.6.2",
+    "commander": "^14.0.2",
     "inquirer": "^13.0.1",
-    "node-fetch": "^3.3.2",
-    "nodemon": "^3.1.11",
-    "readline-sync": "^1.4.10",
     "ws": "^8.18.3"
   },
   "devDependencies": {
-    "@types/inquirer": "^9.0.9",
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.10.1",
-    "@types/readline-sync": "^1.4.8",
     "@types/ws": "^8.18.1",
-    "ts-node": "^10.9.2",
+    "express": "^5.1.0",
+    "jest": "^30.2.0",
+    "supertest": "^7.1.4",
+    "ts-jest": "^29.4.5",
+    "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3"
   }
 }
