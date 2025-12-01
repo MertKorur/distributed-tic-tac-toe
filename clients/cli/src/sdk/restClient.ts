@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { USER_SERVICE_URL, ROOM_SERVICE_URL, GAME_SERVICE_URL } from '../config';
+import { CONFIG } from '../config';
 import { User, GameState, GameStartResponse, GameMoveResponse } from '../types';
 
 export class RestSDK {
@@ -7,7 +7,7 @@ export class RestSDK {
   private roomClient: AxiosInstance;
   private gameClient: AxiosInstance;
 
-  constructor(userUrl = USER_SERVICE_URL, roomUrl = ROOM_SERVICE_URL, gameUrl = GAME_SERVICE_URL) {
+  constructor(userUrl = CONFIG.USER_SERVICE_URL, roomUrl = CONFIG.ROOM_SERVICE_URL, gameUrl = CONFIG.GAME_SERVICE_URL) {
     this.userClient = axios.create({ baseURL: userUrl, timeout: 5000 });
     this.roomClient = axios.create({ baseURL: roomUrl, timeout: 5000 });
     this.gameClient = axios.create({ baseURL: gameUrl, timeout: 5000 });

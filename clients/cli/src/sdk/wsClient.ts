@@ -14,16 +14,19 @@ export class WSClient extends EventEmitter {
   private backoffMs: number;
   private retryCount = 0;
 
+  public url: string;
+
   constructor(
     public roomId: string,
     public username: string,
-    public url: string,
+    url?: string,
     options: WSClientOptions = {}
   ) {
     super();
     this.retry = options.retry ?? true;
     this.maxRetries = options.maxRetries ?? 5;
     this.backoffMs = options.backoffMs ?? 1000;
+    this.url = url ?? process.env.WS_SERVER_URL ?? 'ws://localhost:8080';
   }
 
   connect() {

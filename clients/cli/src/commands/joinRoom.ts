@@ -1,22 +1,26 @@
-import { CommandModule } from 'yargs';
-import chalk from 'chalk';
-import { joinGame } from '../sdk/api';
+import { input } from "@inquirer/prompts";
+import chalk from "chalk";
+import { session } from "../state/sessionState";
+import { joinGame } from "../sdk/api";
 
-export const joinRoomCommand: CommandModule = {
-  command: 'join-room',
-  describe: 'Join a room as Player O',
-  builder: (yargs) =>
-    yargs
-      .option('room', { type: 'string', demandOption: true })
-      .option('username', { type: 'string', demandOption: true }),
-  handler: async (argv) => {
-    const roomId = argv.room as string;
-    const username = argv.username as string;
-    try {
-      await joinGame(roomId, username);
-      console.log(chalk.green(`Joined room ${roomId} as ${username}`));
-    } catch (err: any) {
-      console.error(chalk.red('Failed to join room:'), err.response?.data?.error || err.message);
-    }
+export const cmdJoinRoom = async () => {
+  if (!session.username) {
+    console.log(chalk.red("Register first."));
+    return;
+  }
+
+  const roomId = await input({ message: "Enter room ID:" });
+
+  if (!roomId) {
+    console.log(chalk.red("Room ID required."));
+    return;
+  }
+
+  try {
+    await joinGame(roomId, session.username);
+    session.roomId = roomId;
+    console.log(chalk.green(`Joined room: ${roomId}`));
+  } catch (err: any) {
+    console.log(chalk.red("Join failed:"), err.message);
   }
 };

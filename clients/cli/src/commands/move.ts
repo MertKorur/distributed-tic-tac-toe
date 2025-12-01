@@ -1,15 +1,45 @@
-import { CommandModule } from 'yargs';
-import chalk from 'chalk';
-import { WSClient } from '../sdk/wsClient';
+import chalk from "chalk";
+import { input } from "@inquirer/prompts";
+import { session } from "../state/sessionState";
 
-export const moveCommand: CommandModule = {
-  command: 'move <position>',
-  describe: 'Send a move to WS server (interactive session required)',
-  builder: (yargs) => yargs.positional('position', { type: 'number' }),
-  handler: async (argv) => {
-    const position = argv.position as number;
-    if (position < 0 || position > 8) { console.error(chalk.red('Invalid position')); return; }
-    // In a real session, client instance must be shared. For CLI session, use connect command instead.
-    console.log(chalk.yellow('Use "connect" command for interactive moves.'));
+export const cmdMove = async () => {
+  if (!session.username || !session.roomId) {
+    console.log(chalk.red("You must register and join a room."));
+    return;
+  }
+
+  if (!session.ws) {
+    console.log(chalk.red("Not connected to WebSocket."));
+    return;
+  }
+
+  if (!session.symbol) {
+    console.log(chalk.red("You must pick a symbol first. Run: Connect"));
+    return;
+  }
+
+  while (true) {
+    const mv = await input({ message: 'Move (0-8 or "back"):' });
+
+    if (mv === "back") break;
+
+    const pos = Number(mv);
+    if (Number.isNaN(pos) || pos < 0 || pos > 8) {
+      console.log(chalk.red("Invalid move."));
+      continue;
+    }
+
+    try {
+      session.ws.send({
+        action: "makeMove",
+        roomId: session.roomId,
+        player: session.symbol,
+        position: pos,
+      });
+
+      console.log(chalk.green(`Sent ${session.symbol} to ${pos}`));
+    } catch (err: any) {
+      console.log(chalk.red("Failed to send move:"), err.message ?? err);
+    }
   }
 };

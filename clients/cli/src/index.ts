@@ -1,2 +1,5 @@
-#!/usr/bin/env node
-import './cli';
+import { startCLI } from './cli';
+
+startCLI();
+
+export { startCLI }

@@ -1,20 +1,18 @@
-import yargs from 'yargs';
-import { hideBin } from 'yargs/helpers';
-import { registerCommand } from '../src/commands/register';
-import { createRoomCommand } from '../src/commands/createRoom';
-import { listRoomsCommand } from '../src/commands/listRooms';
-import { joinRoomCommand } from '../src/commands/joinRoom';
-import { connectCommand } from '../src/commands/connect';
-import { moveCommand } from '../src/commands/move';
+import chalk from 'chalk';
+import { mainMenu } from "./menu/mainMenu";
+import { session } from "./state/sessionState"
 
-yargs(hideBin(process.argv))
-  .command(registerCommand)
-  .command(createRoomCommand)
-  .command(listRoomsCommand)
-  .command(joinRoomCommand)
-  .command(connectCommand)
-  .command(moveCommand)
-  .demandCommand()
-  .strict()
-  .help()
-  .parse();
+export const startCLI = async () => {
+  try {
+    await mainMenu();
+  } catch (err) {
+    console.error(chalk.red("Fatal error in CLI:"), err);
+    session.resetWS();
+    process.exit(1);
+  }
+};
+
+// If executed directly
+if (require.main === module) {
+  startCLI();
+}

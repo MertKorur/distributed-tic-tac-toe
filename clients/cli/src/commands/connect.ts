@@ -1,69 +1,69 @@
-import { CommandModule } from 'yargs';
-import inquirer from 'inquirer';
-import chalk from 'chalk';
-import { WSClient } from '../sdk/wsClient';
-import { WSMessage } from '../types';
+import chalk from "chalk";
+import { session } from "../state/sessionState";
+import { WSClient } from "../sdk/wsClient";
+import { getGameStatus } from "../sdk/api";
+import { renderBoard } from "../utils/board";
 
-const renderBoard = (board: string[]) => {
-  console.log('');
-  for (let i = 0; i < 3; i++) {
-    console.log(board.slice(i * 3, i * 3 + 3).map((v, idx) => v || idx + i*3).join(' | '));
-    if (i < 2) console.log('---------');
+export const cmdConnect = async () => {
+  if (!session.username || !session.roomId) {
+    console.log(chalk.red("Register and join a room first."));
+    return;
   }
-  console.log('');
-};
 
-export const connectCommand: CommandModule = {
-  command: 'connect',
-  describe: 'Connect to WS and interactively play',
-  builder: (yargs) =>
-    yargs
-      .option('room', { type: 'string', demandOption: true })
-      .option('username', { type: 'string', demandOption: true }),
-  handler: async (argv) => {
-    const roomId = argv.room as string;
-    const username = argv.username as string;
-    const wsUrl = process.env.WS_SERVER_URL || "ws://localhost:8080";
-    const client = new WSClient(roomId, username, wsUrl);
-    client.connect();
+  // get game status
+  let symbol: "X" | "O" | null = null;
 
-    client.on('connected', () => console.log(chalk.green('Connected to game server')));
-    client.on('message', async (msg: WSMessage) => {
-      switch (msg.action) {
-        case 'updateBoard':
-          renderBoard(msg.board);
-          console.log(chalk.cyan(`Current player: ${msg.currentPlayer}`));
-          if (msg.winner) console.log(chalk.green(`Game over! Winner: ${msg.winner}`));
-          break;
-        case 'userJoined':
-          console.log(chalk.yellow(`${msg.player} joined`));
-          break;
-        case 'userLeft':
-          console.log(chalk.yellow(`${msg.player} left`));
-          break;
-        case 'gameOver':
-          console.log(chalk.green(`Game over! Winner: ${msg.winner}`));
-          break;
-        case 'error':
-          console.log(chalk.red(`Error: ${msg.message}`));
-          break;
-      }
-    });
+  try {
+    const status: any = await getGameStatus(session.roomId)
 
-    while (true) {
-      const answers = await inquirer.prompt<{ position: string }>([{
-        type: 'input', // <--- required type
-        name: 'position',
-        message: 'Enter position (0-8) or "q" to quit',
-        validate: (v: string) => {
-          if (v === 'q') return true;
-          const n = Number(v);
-          return !isNaN(n) && n >= 0 && n <= 8 ? true : 'Enter a number 0-8 or q';
-        }
-      }]);
-      const position = answers.position;
-      if (position === 'q') { client.disconnect(); break; }
-      client.send({ action: 'makeMove', roomId, player: username, position: Number(position) });
+    if (status.playerX === session.username) symbol = "X";
+    else if (status.playerO === session.username) symbol = "O";
+
+    if (!symbol) {
+      console.log(chalk.red("Could not infer your symbol from backend. Room creator = X, joiner = O. Something is wrong."));
+      return;
     }
+  } catch (err) {
+    console.log(chalk.red("Failed to fetch game status."), err);
+    return;
   }
+
+  session.symbol = symbol;
+
+  console.log(chalk.green(`Connected as symbol: ${session.symbol}`));
+
+  // Connect WS //
+  // Reset existing connection if there is
+  session.resetWS();
+  const ws = new WSClient(session.roomId, session.username);
+  session.ws = ws;
+
+  ws.on("connected", () => console.log(chalk.green("WS connected.")));
+
+  ws.on("message", (msg: any) => {
+    switch (msg.action) {
+      case "updateBoard":
+        console.log(chalk.cyan(`Current player: ${msg.currentPlayer ?? "unknown"}`));
+        renderBoard(msg.board);
+        break;
+      case "userJoined":
+        console.log(chalk.yellow(`User joined: ${msg.player}`));
+        break;
+      case "userLeft":
+        console.log(chalk.yellow(`User left: ${msg.player}`));
+        break;
+      case "gameOver":
+        console.log(chalk.magenta(`Game over - winner: ${msg.winner}`));
+        break;
+      case "error":
+        console.log(chalk.red(`Server error: ${msg.message}`));
+        break;
+      default:
+        console.log(chalk.dim("WS:"), JSON.stringify(msg));
+    }
+  });
+
+  ws.connect();
+
+  console.log(chalk.dim(`Connected as ${session.symbol}- do "Make Move" to make move.`));
 };

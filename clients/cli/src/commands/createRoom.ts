@@ -1,18 +1,18 @@
-import { CommandModule } from 'yargs';
-import chalk from 'chalk';
-import { createRoom } from '../sdk/api';
+import chalk from "chalk";
+import { session } from "../state/sessionState";
+import { createRoom } from "../sdk/api";
 
-export const createRoomCommand: CommandModule = {
-  command: 'create-room',
-  describe: 'Create a new room as Player X',
-  builder: (yargs) => yargs.option('username', { type: 'string', demandOption: true }),
-  handler: async (argv) => {
-    const username = argv.username as string;
-    try {
-      const room = await createRoom(username);
-      console.log(chalk.green(`Room created. Room ID: ${room.roomId}`));
-    } catch (err: any) {
-      console.error(chalk.red('Failed to create room:'), err.message);
-    }
+export const cmdCreateRoom = async () => {
+  if (!session.username) {
+    console.log(chalk.red("Register first."));
+    return;
+  }
+
+  try {
+    const room = await createRoom(session.username);
+    session.roomId = room.roomId;
+    console.log(chalk.green(`Created room: ${room.roomId}`));
+  } catch (err: any) {
+    console.log(chalk.red("Failed to create room:"), err.message);
   }
 };
