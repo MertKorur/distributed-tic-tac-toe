@@ -7,7 +7,7 @@ export class SessionState {
   roomId: string | null = null;
   ws: WSClient | null = null;
   symbol: PlayerSymbol = null;
-
+  
   resetWS() {
     if (this.ws) {
       try {
@@ -31,6 +31,22 @@ export class SessionState {
   // Check if user is ready to connect / play
   isReady(): boolean {
     return !!this.username && !!this.roomId && !!this.symbol;
+  }
+
+  setUser(username: string) {
+    this.username = username;
+  }
+
+  setRoom(roomId: string) {
+    this.roomId = roomId;
+  }
+
+  setSymbol(symbol: PlayerSymbol) {
+    this.symbol = symbol;
+  }
+
+  setWS(ws: WSClient | null) {
+    this.ws = ws;
   }
 }
 

@@ -5,12 +5,10 @@ import { getGameStatus } from "../sdk/api";
 import { renderBoard } from "../utils/board";
 
 export const cmdConnect = async () => {
-  if (!session.username || !session.roomId) {
+  if (!session.username || !session.roomId || !session.symbol) {
     console.log(chalk.red("Register and join a room first."));
     return;
   }
-
- 
 
   try {
     const status: any = await getGameStatus(session.roomId)

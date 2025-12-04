@@ -8,22 +8,19 @@ export const cmdCreateRoom = async () => {
     return;
   }
 
+  if (session.roomId) {
+    console.log(chalk.red(`User ${session.username} already has active room.`))
+    return;
+  }
+
   try {
-    const room = await createRoom(session.username);
+    const res = await createRoom(session.username);
+    session.setRoom(res.roomId);
+    session.setSymbol("X");
 
-    session.roomId = room.roomId;
-    session.symbol = "X";
-
-    console.log(chalk.green(`Created room: ${room.roomId}`));
+    console.log(chalk.green(`Created room: ${res.roomId}`));
     console.log(chalk.blue(`You're player ${session.symbol}. Use "connect" to enter the game.`));
   } catch (err: any) {
-    session.roomId = null;
-    session.symbol = null;
-
-    if (err.response) {
-      console.log(chalk.red(`Failed to create room:${err.response.data?.error}`));
-      return;
-    }
-    console.log(chalk.red("Failed to create room:"), err.message);
+    console.log(chalk.red("Failed to create room:"), err.response?.data?.error || err.message);
   }
 };
