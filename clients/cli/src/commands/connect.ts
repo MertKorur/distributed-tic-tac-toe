@@ -5,24 +5,24 @@ import { getGameStatus } from "../sdk/api";
 import { renderBoard } from "../utils/board";
 
 export const cmdConnect = async () => {
-  if (!session.username || !session.roomId || !session.symbol) {
+  if (!session.username) {
     console.log(chalk.red("Register and join a room first."));
     return;
   }
 
+  if (!session.roomId) {
+    console.log(chalk.red("Join or create a room first."));
+    return;
+  }
+
+  if (!session.symbol) {
+    console.log(chalk.red("Symbol missing. Creator = X, Joiner = O."));
+    return;
+  }
+
+  let status: any;
   try {
-    const status: any = await getGameStatus(session.roomId)
-
-    let resolved: "X" | "O" | null = null;
-    if (status.playerX === session.username) resolved = "X";
-    if (status.playerO === session.username) resolved = "O";
-
-    if (!resolved) {
-      console.log(chalk.red("Could not resolve your symbol from backend. Room creator = X, joiner = O. Something is wrong."));
-      return;
-    }
-
-    session.symbol = resolved;
+    status = await getGameStatus(session.roomId)
   } catch (err: any) {
     console.log(
       chalk.red("Failed to fetch game status:"), 
@@ -31,29 +31,48 @@ export const cmdConnect = async () => {
     return;
   }
 
-  console.log(chalk.green(`Connected as symbol: ${session.symbol}`));
+  if (status.playerX === session.username) session.symbol = "X";
+  else if (status.playerO === session.username) session.symbol = "O";
+  else {
+    console.log(chalk.red("Could not resolve your symbol from backend. Room creator = X, joiner = O. Something is wrong."));
+    return;
+  }
+
+  if (!Array.isArray(status.board) || status.board.length !== 9) {
+    console.log(chalk.red("Invalid game state received from backend."));
+    return;
+  }
+
+  console.log(chalk.green(`Connected as symbol: ${session.symbol} in room: ${session.roomId}`));
 
   // Connect WS //
   // Reset existing connection if there is
   try {
     session.resetWS();
+
     const ws = new WSClient(session.roomId, session.username);
-    session.ws = ws;
+    session.setWS(ws);
 
-    ws.on("connected", () => console.log(chalk.green("WS connected.")));
+    let gameActive = true;
 
-    ws.on("message", (msg: any) => {
-      if (!msg || !msg.action) {
-        console.log(chalk.red("Received malformed WS message."), msg);
+    ws.on("connected", () => console.log(chalk.green("[WS] connected.")));
+
+    ws.on("message", async (msg: any) => {
+      if (!msg?.action) {
+        console.log(chalk.red("[WS] Malformed message."), msg);
         return;
       }
 
       
       switch (msg.action) {
+        case "joinedRoom":
+          console.log(chalk.green(`Joined room via WS: ${msg.roomId}`));
+          break;
+
         case "updateBoard":
+          if (!gameActive) return;
           console.log(chalk.cyan(`Current player: ${msg.currentPlayer}`));
           renderBoard(msg.board);
-          if (msg.winner) console.log(chalk.yellow(`Winner: ${msg.winner}`));
           break;
 
         case "userJoined":
@@ -65,8 +84,16 @@ export const cmdConnect = async () => {
           break;
 
         case "gameOver":
+          gameActive = false;
           console.log(chalk.magenta(`Game over - winner: ${msg.winner}`));
-          renderBoard(msg.board)
+          console.log(chalk.magenta(`Do "back" to return to main menu.`));
+
+          try {
+            ws.disconnect();
+          } catch {}
+
+          session.setRoom(null);
+          session.setSymbol(null);
           break;
 
         case "error":
@@ -78,12 +105,16 @@ export const cmdConnect = async () => {
       }
     });
 
-    ws.on("disconnect", () => {
-      console.log(chalk.red("WS disconnected."));
+    ws.on("error", (err: Error) => {
+      console.log(chalk.red("[WS ERROR]"), err.message);
+    });
+
+    ws.on("close", () => {
+      console.log(chalk.red("[WS] Connection closed."));
     });
 
     ws.connect();
-    console.log(chalk.dim(`Connected as ${session.symbol}. Do "Make Move" to make move.`));
+    console.log(chalk.dim(`Connected as ${session.symbol}. Do "Make Move".`));
   } catch (err: any) {
     console.log(chalk.red("Failed to initialize WebSocket."), err?.message);
   }

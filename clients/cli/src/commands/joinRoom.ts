@@ -25,17 +25,14 @@ export const cmdJoinRoom = async () => {
 
   // attempt join
   try {
-    const res = await joinGame(roomId, session.username);
-    
-    if (!res.symbol) {
-      console.log(chalk.red("Server did not assign symbol. Join failed."));
-      return;
-    }
+    await joinGame(roomId, session.username);
+
+    const symbol: "X" | "O" = "O";
 
     session.setRoom(roomId);
-    session.setSymbol(res.symbol);
+    session.setSymbol(symbol);
 
-    console.log(chalk.green(`Joined room: ${roomId} as ${res.symbol}`));
+    console.log(chalk.green(`Joined room: ${roomId} as ${symbol}`));
   } catch (err: any) {
     const status = err?.response?.status;
     const data = err?.response?.data;

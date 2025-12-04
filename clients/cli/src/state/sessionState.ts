@@ -8,7 +8,7 @@ export class SessionState {
   ws: WSClient | null = null;
   symbol: PlayerSymbol = null;
   
-  resetWS() {
+  resetWS(): void {
     if (this.ws) {
       try {
         this.ws.disconnect();
@@ -21,7 +21,7 @@ export class SessionState {
   }
 
   // fully reset session
-  resetSession = () => {
+  resetSession(): void {
     this.resetWS();
     this.username = null;
     this.roomId = null;
@@ -33,19 +33,19 @@ export class SessionState {
     return !!this.username && !!this.roomId && !!this.symbol;
   }
 
-  setUser(username: string) {
+  setUser(username: string): void {
     this.username = username;
   }
 
-  setRoom(roomId: string) {
+  setRoom(roomId: string | null): void {
     this.roomId = roomId;
   }
 
-  setSymbol(symbol: PlayerSymbol) {
+  setSymbol(symbol: PlayerSymbol): void {
     this.symbol = symbol;
   }
 
-  setWS(ws: WSClient | null) {
+  setWS(ws: WSClient | null): void {
     this.ws = ws;
   }
 }
